@@ -2,14 +2,44 @@
 
 BN_VERSION = "0.0.1"
 
-import sys, os, json, requests, zipfile, io
+import sys, os, errno, json, requests, zipfile, io
+from shutil import copyfile
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtWebEngineWidgets import *
-from settings import SettingsWindow
+#from settings import SettingsWindow
 
-conf_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.json")
-conf = json.load(open(conf_path))
+conf_path_base = QStandardPaths.writableLocation(QStandardPaths.GenericConfigLocation);
+if not conf_path_base:
+	raise SystemExit("No writable location available for config.")
+# can be application-specific or not -> use GenericConfigLocation DONE
+# can return an empty string -> error DONE
+# the location may not exist -> create it DONE
+conf_path = os.path.join(conf_path_base, "blazenet")
+if not os.path.exists(conf_path):
+	os.makedirs(conf_path)
+
+
+conf_filename = os.path.join(conf_path, "config.json")
+
+if not os.path.isfile(conf_filename):
+	print("Config file not found. Copying default config...")
+	default_conf_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.default.json")
+
+	try:
+		copyfile(default_conf_filename, conf_filename)
+
+	except OSError:
+		raise
+		raise SystemExit("Unable to create config file.")
+
+try:
+	conf = json.load(open(conf_filename))
+
+except json.decoder.JSONDecodeError:
+	raise SystemExit("The contents of the config file are invalid.")
+
+print(conf["homepage"])
 bookmarks = []
 
 def formatUrl(url):
